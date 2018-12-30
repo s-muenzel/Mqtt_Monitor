@@ -33,9 +33,8 @@ class Mein_MQTT {
     void Speichern(bool ja);
 
   private:
+    char _client_ID[20];
 
-    void Sichern();
-    void reconnect();
     int anzahl_nachrichten;
     int naechste_nachricht;
     char thema[MAX_THEMEN][MAX_THEMA]; // auf welches topic ist/wird registriert
@@ -47,9 +46,10 @@ class Mein_MQTT {
     char nachricht_inhalt[MAX_NACHRICHTEN][MAX_NACHRICHT]; // Ring-Buffer für Nachrichten
     char z_puffer[30];
 
+    void Sichern();
+    void reconnect();
     bool _update_vorhanden;
     bool _speichern;
-
     int _speicher_count;
 };
 

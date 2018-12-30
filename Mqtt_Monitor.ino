@@ -17,12 +17,13 @@
 #define D_PRINTLN(...)   Serial.println(__VA_ARGS__)
 #define D_PRINTF(...)    Serial.printf(__VA_ARGS__)
 #else
-#define D_BEGIN(speed) 
-#define D_PRINT(...)   
+#define D_BEGIN(speed)
+#define D_PRINT(...)
 #define D_PRINTLN(...)
 #define D_PRINTF(...)
 #endif
 
+WiFiClient __Wifi_Client;
 WebS __WebS;
 Mein_MQTT __MQTT;
 NTP_Helfer __NTP;
@@ -64,7 +65,7 @@ void setup() {
 
   // NTP
   __NTP.Beginn();
-    
+
   // Webserver konfigurieren
   __WebS.Beginn();
   __WebS.Admin_Mode(true);

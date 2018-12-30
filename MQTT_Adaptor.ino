@@ -1,6 +1,8 @@
 #define USE_ARDUINO_MQTT
 //#define USE_PUBSUBBLIENT
 
+#include "MQTT_Adaptor.h"
+
 #ifdef USE_PUBSUBCLIENT
 #include <PubSubClient.h>
 PubSubClient client(__Wifi_Client);
@@ -37,39 +39,59 @@ void MQTT_Adaptor::Beginn() {
 #endif // USE_PUBSUBBLIENT
 #ifdef USE_ARDUINO_MQTT
   client.begin(mqtt_server, 1883, __Wifi_Client);
-  client.onMessage(Nachricht_Erhalten);//  client.onMessageAdvanced(Nachricht_Erhalten);
+  client.onMessage(Nachricht_Erhalten);
+  //  client.onMessageAdvanced(Nachricht_Erhalten);
 #endif // USE_ARDUINO_MQTT
-	}
-	
-bool MQTT_Adaptor::binVerbunden() {
-		return client.connected();
-	}
-	
-	bool MQTT_Adaptor::Verbinde(const char*ClientID, const char* User, const char* PW) {
-		return client.connect(clientId.c_str(), "sensor", "AlteRinne14");
-	}
-	
-	void MQTT_Adaptor::Tick() {
-	  yield();
-	  client.loop();
-	  yield();
-	}
-	
-	void MQTT_Adaptor::Subscribe(const char *Thema) {
-		if (client.connected()) {
-			client.subscribe(Thema);
-			yield();
-			client.loop();
-			yield();
-		}
-	}
+}
 
-	void MQTT_Adaptor::Unsubscribe(const char *Thema) {
-		if (client.connected()) {
-			client.unsubscribe(Thema);
-			yield();
-			client.loop();
-			yield();
-		}
-	}
+bool MQTT_Adaptor::Verbunden() {
+  return client.connected();
+}
 
+bool MQTT_Adaptor::Verbinde(const char*ClientID, const char* User, const char* PW) {
+  return client.connect(ClientID, User, PW);
+}
+
+void MQTT_Adaptor::Tick() {
+  yield();
+  client.loop();
+  yield();
+}
+
+bool MQTT_Adaptor::Subscribe(const char *Thema) {
+  if (client.connected()) {
+#ifdef USE_PUBSUBBLIENT
+    bool ergebnis = client.subscribe(Thema, 1);
+#endif // USE_PUBSUBBLIENT
+#ifdef USE_ARDUINO_MQTT
+    bool ergebnis = client.subscribe(Thema, 2);
+#endif // USE_ARDUINO_MQTT
+    yield();
+    client.loop();
+    yield();
+    return ergebnis;
+  } else {
+    return true;
+  }
+}
+
+bool MQTT_Adaptor::Unsubscribe(const char *Thema) {
+  if (client.connected()) {
+    bool ergebnis = client.unsubscribe(Thema);
+    yield();
+    client.loop();
+    yield();
+    return ergebnis;
+  } else {
+    return true;
+  }
+}
+
+int MQTT_Adaptor::Status() {
+#ifdef USE_PUBSUBBLIENT
+  return client.state();
+#endif // USE_PUBSUBBLIENT
+#ifdef USE_ARDUINO_MQTT
+  return client.lastError();
+#endif // USE_ARDUINO_MQTT
+}

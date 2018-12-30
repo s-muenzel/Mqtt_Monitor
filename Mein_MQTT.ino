@@ -1,59 +1,11 @@
-#define USE_ARDUINO_MQTT
-//#define USE_PUBSUBBLIENT
-
-#ifdef USE_PUBSUBCLIENT
-#include <PubSubClient.h>
-#endif // USE_PUBSUBCLIENT
-#ifdef USE_ARDUINO_MQTT
-#include <MQTT.h>
-#include <MQTTClient.h>
-#endif // USE_ARDUINO_MQTT
-
 #include <SPIFFS.h>
 #include <Regexp.h>
 
 #include "Zugangsinfo.h"
 #include "Mein_MQTT.h"
+#include "MQTT_Adaptor.h"
 
-WiFiClient __Wifi_Client;
-
-#ifdef USE_PUBSUBBLIENT
-PubSubClient client(__Wifi_Client);
-#endif // USE_PUBSUBBLIENT
-#ifdef USE_ARDUINO_MQTT
-MQTTClient client;
-#endif // USE_ARDUINO_MQTT
-
-
-///////////////////////////////////////////////////
-// MQTT Part als Adator Pattern
-
-#ifdef USE_PUBSUBBLIENT
-void Nachricht_Erhalten(char* topic, byte* payload, unsigned int length) {
-  D_PRINTF("Message arrived [%s] ", topic);
-  digitalWrite(LED_BUILTIN, LOW);   // Turn the LED on (Note that LOW is the voltage level
-  unsigned int laenge = (length > MAX_NACHRICHT) ? MAX_NACHRICHT : length;
-
-  for (int i = 0; i < laenge; i++) {
-    D_PRINT((char)payload[i]);
-  }
-  D_PRINTLN();
-  __MQTT.NeuerEintrag((const char*)topic, (const char*)payload, laenge);
-
-  digitalWrite(LED_BUILTIN, HIGH);  // Turn the LED off by making the voltage HIGH
-}
-#endif // USE_PUBSUBBLIENT
-#ifdef USE_ARDUINO_MQTT
-void Nachricht_Erhalten(String &topic, String &payload) {
-  digitalWrite(LED_BUILTIN, LOW);   // Turn the LED on (Note that LOW is the voltage level
-  D_PRINTF("Message arrived [%s] [%s]", topic.c_str(), payload.c_str());
-  unsigned int laenge = (payload.length() > MAX_NACHRICHT) ? MAX_NACHRICHT : payload.length();
-
-  __MQTT.NeuerEintrag(topic.c_str(), payload.c_str(), laenge);
-
-  digitalWrite(LED_BUILTIN, HIGH);  // Turn the LED off by making the voltage HIGH
-}
-#endif // USE_ARDUINO_MQTT
+MQTT_Adaptor __MQTT_Adaptor;
 
 
 Mein_MQTT::Mein_MQTT() {
@@ -65,35 +17,23 @@ Mein_MQTT::Mein_MQTT() {
   }
   _update_vorhanden = false;
   _speichern = false;
+  sprintf(_client_ID, "E32__-%lH%lH", (long unsigned int)(0xffff & ESP.getEfuseMac()), (long unsigned int)(0xffff & (ESP.getEfuseMac() >> 32)));
 }
 
 void Mein_MQTT::Beginn() {
-#ifdef USE_PUBSUBBLIENT
-  client.setServer(mqtt_server, 1883);
-  client.setCallback(Nachricht_Erhalten);
-#endif // USE_PUBSUBBLIENT
-#ifdef USE_ARDUINO_MQTT
-  client.begin(mqtt_server, 1883, __Wifi_Client);
-  client.onMessage(Nachricht_Erhalten);
-//  client.onMessageAdvanced(Nachricht_Erhalten);
-#endif // USE_ARDUINO_MQTT
+  __MQTT_Adaptor.Beginn();
 }
 
 void Mein_MQTT::Tick() {
-  if (!client.connected()) {
+  if (!__MQTT_Adaptor.Verbunden()) {
     char tt[MAX_THEMA];
     char nn[MAX_NACHRICHT];
     strcpy(tt, "MQTT FEHLER");
-#ifdef USE_PUBSUBCLIENT
-    sprintf(nn, "Fehlerstatus: %d", client.state());
-#endif // PUBSUBCLIENT
-#ifdef USE_ARDUINO_MQTT
-    sprintf(nn, "Fehlerstatus: %d %d", client.lastError(),  client.returnCode());
-#endif // USE_ARDUINO_MQTT
+    sprintf(nn, "Fehlerstatus: %d", __MQTT_Adaptor.Status());
     NeuerEintrag(tt, nn, strlen(nn));
     reconnect();
   }
-  client.loop();
+  __MQTT_Adaptor.Tick();
 }
 
 int Mein_MQTT::Anzahl_Nachrichten() {
@@ -150,9 +90,8 @@ bool Mein_MQTT::Registriere_Thema(int i, const char* t) {
     return false;
   }
   D_PRINTF("Topic-Wechsel Thema[%d] alt:<%s> auf neu:<%s>", i, thema[i], t);
-  if (client.connected() && (strlen(thema[i]) > 0)) {
-    client.unsubscribe(thema[i]);
-    delay(50); client.loop(); delay(50); // Callback leeren
+  if (strlen(thema[i]) > 0) {
+    __MQTT_Adaptor.Unsubscribe(thema[i]);
   }
   strncpy(thema[i], t, MAX_THEMA);
   strncpy(thema_regexp[i], t, MAX_THEMA);
@@ -161,24 +100,20 @@ bool Mein_MQTT::Registriere_Thema(int i, const char* t) {
   ms.GlobalReplace("#.*", ".*");
   D_PRINTF(" Regexp:<%s>", thema_regexp[i]);
 
-  if (client.connected()) {
-    if (strlen(t) > 0) {
-      if (client.subscribe(t)) {
-        D_PRINTF(" erfolgreich\n");
-        delay(50); client.loop(); delay(50); // Callback leeren
-      } else {
-        D_PRINTF(" fehler\n");
-        client.loop(); // Callback leeren
-      }
+  if (strlen(t) > 0) {
+    if (__MQTT_Adaptor.Subscribe(t)) {
+      D_PRINTF(" erfolgreich\n");
     } else {
-      D_PRINTF(" leer\n");
+      D_PRINTF(" fehler\n");
     }
   } else {
-    D_PRINTF(" vorbereitet\n");
+    D_PRINTF(" leer\n");
   }
 }
 
 void Mein_MQTT::NeuerEintrag(const char*t, const char *n, int l) {
+  digitalWrite(LED_BUILTIN, LOW);   // Turn the LED on (Note that LOW is the voltage level
+  D_PRINTF("Neue Nachricht [%s] [%s]\n", t, n);
   _update_vorhanden = true;
   nachricht_zeit[naechste_nachricht] = now();
   nachricht_filter_no[naechste_nachricht] = 255;
@@ -207,39 +142,26 @@ void Mein_MQTT::NeuerEintrag(const char*t, const char *n, int l) {
   if (_speichern && (_speicher_count == MAX_NACHRICHTEN)) {
     Sichern();
   }
+  digitalWrite(LED_BUILTIN, HIGH);  // Turn the LED off by making the voltage HIGH
 }
 
 void Mein_MQTT::reconnect() {
-  while (!client.connected()) {
-    String clientId = "E32__-";
-    clientId += String((long unsigned int)(0xffff & ESP.getEfuseMac()), HEX);
-    clientId += String((long unsigned int)(0xffff & (ESP.getEfuseMac() >> 32)), HEX);
-    D_PRINTF("Verbinde mit MQTT server als <%s> ", clientId.c_str());
-    // Attempt to connect
-    if (client.connect(clientId.c_str(), "sensor", "AlteRinne14")) {
+  while (!__MQTT_Adaptor.Verbunden()) {
+    D_PRINTF("Verbinde mit MQTT server als <%s> ", _client_ID);
+    if (__MQTT_Adaptor.Verbinde(_client_ID, device_user, device_pw)) {
       D_PRINTLN("verbunden");
       for (int i = 0; i < MAX_THEMEN; i++) {
         if (strlen(thema[i]) > 0) {
           D_PRINTF("subscribing topic <%s> ", thema[i]);
-          if (client.subscribe(thema[i])) {
+          if (__MQTT_Adaptor.Subscribe(thema[i])) {
             D_PRINTLN("erfolgreich");
-            delay(50); client.loop(); delay(50); // Callback leeren
           } else {
             D_PRINTLN("nicht erfolgreich");
-            client.loop(); // Callback leeren
           }
         }
       }
     } else {
-      D_PRINT("failed, rc=");
-#ifdef USE_PUBSUBCLIENT
-      D_PRINT(client.state());
-#endif // PUBSUBCLIENT
-#ifdef USE_ARDUINO_MQTT
-      D_PRINTF("%d (%d), ",client.lastError(), client.returnCode());
-#endif // USE_ARDUINO_MQTT
-      D_PRINTLN(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
+      D_PRINTF("nicht verbunden, rc=%d, in 5 Sekunden neuer Versuch\n", __MQTT_Adaptor.Status());
       delay(5000);
     }
   }
