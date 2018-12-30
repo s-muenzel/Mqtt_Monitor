@@ -1,23 +1,35 @@
+#define USE_ARDUINO_MQTT
+//#define USE_PUBSUBBLIENT
 
-#include <ArduinoOTA.h>
-#include <WiFiUdp.h>
+#ifdef USE_PUBSUBCLIENT
 #include <PubSubClient.h>
+#endif // USE_PUBSUBCLIENT
+#ifdef USE_ARDUINO_MQTT
+#include <MQTT.h>
+#include <MQTTClient.h>
+#endif // USE_ARDUINO_MQTT
+
 #include <SPIFFS.h>
 #include <Regexp.h>
 
 #include "Zugangsinfo.h"
 #include "Mein_MQTT.h"
 
-WiFiClient espClient;
-PubSubClient client(espClient);
-char msg[MAX_NACHRICHT];
+WiFiClient __Wifi_Client;
 
+#ifdef USE_PUBSUBBLIENT
+PubSubClient client(__Wifi_Client);
+#endif // USE_PUBSUBBLIENT
+#ifdef USE_ARDUINO_MQTT
+MQTTClient client;
+#endif // USE_ARDUINO_MQTT
 
 
 ///////////////////////////////////////////////////
-// MQTT Part
+// MQTT Part als Adator Pattern
 
-void callback(char* topic, byte* payload, unsigned int length) {
+#ifdef USE_PUBSUBBLIENT
+void Nachricht_Erhalten(char* topic, byte* payload, unsigned int length) {
   D_PRINTF("Message arrived [%s] ", topic);
   digitalWrite(LED_BUILTIN, LOW);   // Turn the LED on (Note that LOW is the voltage level
   unsigned int laenge = (length > MAX_NACHRICHT) ? MAX_NACHRICHT : length;
@@ -30,6 +42,18 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
   digitalWrite(LED_BUILTIN, HIGH);  // Turn the LED off by making the voltage HIGH
 }
+#endif // USE_PUBSUBBLIENT
+#ifdef USE_ARDUINO_MQTT
+void Nachricht_Erhalten(String &topic, String &payload) {
+  digitalWrite(LED_BUILTIN, LOW);   // Turn the LED on (Note that LOW is the voltage level
+  D_PRINTF("Message arrived [%s] [%s]", topic.c_str(), payload.c_str());
+  unsigned int laenge = (payload.length() > MAX_NACHRICHT) ? MAX_NACHRICHT : payload.length();
+
+  __MQTT.NeuerEintrag(topic.c_str(), payload.c_str(), laenge);
+
+  digitalWrite(LED_BUILTIN, HIGH);  // Turn the LED off by making the voltage HIGH
+}
+#endif // USE_ARDUINO_MQTT
 
 
 Mein_MQTT::Mein_MQTT() {
@@ -44,8 +68,15 @@ Mein_MQTT::Mein_MQTT() {
 }
 
 void Mein_MQTT::Beginn() {
+#ifdef USE_PUBSUBBLIENT
   client.setServer(mqtt_server, 1883);
-  client.setCallback(callback);
+  client.setCallback(Nachricht_Erhalten);
+#endif // USE_PUBSUBBLIENT
+#ifdef USE_ARDUINO_MQTT
+  client.begin(mqtt_server, 1883, __Wifi_Client);
+  client.onMessage(Nachricht_Erhalten);
+//  client.onMessageAdvanced(Nachricht_Erhalten);
+#endif // USE_ARDUINO_MQTT
 }
 
 void Mein_MQTT::Tick() {
@@ -53,7 +84,12 @@ void Mein_MQTT::Tick() {
     char tt[MAX_THEMA];
     char nn[MAX_NACHRICHT];
     strcpy(tt, "MQTT FEHLER");
+#ifdef USE_PUBSUBCLIENT
     sprintf(nn, "Fehlerstatus: %d", client.state());
+#endif // PUBSUBCLIENT
+#ifdef USE_ARDUINO_MQTT
+    sprintf(nn, "Fehlerstatus: %d %d", client.lastError(),  client.returnCode());
+#endif // USE_ARDUINO_MQTT
     NeuerEintrag(tt, nn, strlen(nn));
     reconnect();
   }
@@ -196,7 +232,12 @@ void Mein_MQTT::reconnect() {
       }
     } else {
       D_PRINT("failed, rc=");
+#ifdef USE_PUBSUBCLIENT
       D_PRINT(client.state());
+#endif // PUBSUBCLIENT
+#ifdef USE_ARDUINO_MQTT
+      D_PRINTF("%d (%d), ",client.lastError(), client.returnCode());
+#endif // USE_ARDUINO_MQTT
       D_PRINTLN(" try again in 5 seconds");
       // Wait 5 seconds before retrying
       delay(5000);
@@ -221,15 +262,15 @@ void Mein_MQTT::Speichern(bool ja) {
 }
 
 void Mein_MQTT::Sichern() {
-  if((SPIFFS.totalBytes() - SPIFFS.usedBytes()) < 10000) {
-    D_PRINTF("SPIFFS fs voll, max bytes: %d, used bytes: %d, free; %d\n", 
-      SPIFFS.totalBytes(), SPIFFS.usedBytes(),(SPIFFS.totalBytes() - SPIFFS.usedBytes()));
+  if ((SPIFFS.totalBytes() - SPIFFS.usedBytes()) < 10000) {
+    D_PRINTF("SPIFFS fs voll, max bytes: %d, used bytes: %d, free; %d\n",
+             SPIFFS.totalBytes(), SPIFFS.usedBytes(), (SPIFFS.totalBytes() - SPIFFS.usedBytes()));
     return;
   }
-  File logfile = SPIFFS.open("/log.txt","a");
+  File logfile = SPIFFS.open("/log.txt", "a");
   D_PRINTF("SPIFFS /log.txt geöffnet\n");
-//  for(int i=_speicher_count-1;i>=0;i--) {
-  for(int i=0; i<_speicher_count;i++) {
+  //  for(int i=_speicher_count-1;i>=0;i--) {
+  for (int i = 0; i < _speicher_count; i++) {
     logfile.printf("%s,%d,%s,%s\n", Zeitstempel(i), Filter(i), Thema(i), Nachricht(i));
   }
   logfile.close();
