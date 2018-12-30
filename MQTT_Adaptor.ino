@@ -58,6 +58,25 @@ void MQTT_Adaptor::Tick() {
   yield();
 }
 
+bool MQTT_Adaptor::Publish(const char topic[], const char payload[], bool retained, int qos) {
+#ifdef USE_PUBSUBBLIENT
+  yield();
+  if(client.publish(topic, payload, retained)) {
+    delay(10);
+    return true;
+  } else
+  return false;
+#endif // USE_PUBSUBBLIENT
+#ifdef USE_ARDUINO_MQTT
+  yield();
+  if(client.publish(topic, payload, retained, qos)) {
+    delay(10);
+    return true;
+  } else
+  return false;
+#endif // USE_ARDUINO_MQTT
+}
+
 bool MQTT_Adaptor::Subscribe(const char *Thema) {
   if (client.connected()) {
 #ifdef USE_PUBSUBBLIENT
