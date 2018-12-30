@@ -273,31 +273,6 @@ void WebS::Beginn() {
   if (!SPIFFS.begin()) {
     D_PRINTLN("Failed to mount file system");
   }
-  {
-#ifdef ESP8266
-    Dir dir = SPIFFS.openDir("/");
-    while (dir.next()) {
-      String fileName = dir.fileName();
-      size_t fileSize = dir.fileSize();
-#endif
-#if 0
-    }
-#endif
-#ifdef ESP32
-    File dir = SPIFFS.open("/");
-    File entry = dir.openNextFile();
-    while (entry) {
-      String fileName = entry.name();
-      size_t fileSize = dir.size();
-#endif
-      D_PRINTF("FS File: %s, size: %s\n", fileName.c_str(), formatBytes(fileSize).c_str());
-#ifdef ESP32
-      entry.close();
-      entry = dir.openNextFile();
-#endif
-    }
-    D_PRINTF("\n");
-  }
 
   server.on("/",              handleRoot);          // Anzeige Weckzeiten und Möglichkeit Weckzeiten zu setzen. Auch Link zu Konfig und Dateien
   server.on("/Status",        handleStatus);        // Dynamische Daten
@@ -317,7 +292,6 @@ void WebS::Beginn() {
 
   server.begin();
 }
-
 
 void WebS::Admin_Mode(bool ja) {
   __Admin_Mode_An = ja;

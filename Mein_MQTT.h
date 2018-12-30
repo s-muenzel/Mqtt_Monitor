@@ -7,9 +7,9 @@
 #define MAX_THEMEN      5
 
 
-class MQTT {
+class Mein_MQTT {
   public:
-    MQTT();
+    Mein_MQTT();
 
     void Beginn();
 

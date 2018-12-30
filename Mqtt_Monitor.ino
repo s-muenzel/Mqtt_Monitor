@@ -6,7 +6,6 @@
 #include <TimeLib.h>
 
 #include "Zugangsinfo.h"
-#include "OTA.h"
 #include "WebS.h"
 #include "NTP.h"
 #include "Mein_MQTT.h"
@@ -24,7 +23,6 @@
 #define D_PRINTF(...)
 #endif
 
-OTA __OTA;
 WebS __WebS;
 Mein_MQTT __MQTT;
 NTP_Helfer __NTP;
@@ -47,12 +45,12 @@ void setup_wifi() {
     D_PRINT(".");
   }
 
-  randomSeed(micros());
-
   D_PRINTLN("");
   D_PRINTLN("WiFi connected");
   D_PRINTLN("IP address: ");
   D_PRINTLN(WiFi.localIP());
+
+  MDNS.begin("MQTT_Monitor");
 }
 
 
@@ -66,12 +64,7 @@ void setup() {
 
   // NTP
   __NTP.Beginn();
-  
-  // OTA Initialisieren
-  __OTA.Beginn();
-  __OTA.Bereit(true);
-  D_PRINT(" OTA vorbereitet");
-  
+    
   // Webserver konfigurieren
   __WebS.Beginn();
   __WebS.Admin_Mode(true);
@@ -84,8 +77,8 @@ void setup() {
 void loop() {
 
   __MQTT.Tick();
-  __OTA.Tick();
+  yield();
   __WebS.Tick();
-
   delay(50);
 }
+
