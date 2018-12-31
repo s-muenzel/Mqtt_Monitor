@@ -3,7 +3,6 @@
 
 #include "Zugangsinfo.h"
 #include "Mein_MQTT.h"
-#include "MQTT_Adaptor.h"
 
 MQTT_Adaptor __MQTT_Adaptor;
 
@@ -17,11 +16,12 @@ Mein_MQTT::Mein_MQTT() {
   }
   _update_vorhanden = false;
   _speichern = false;
-  sprintf(_client_ID, "E32__-%lH%lH", (long unsigned int)(0xffff & ESP.getEfuseMac()), (long unsigned int)(0xffff & (ESP.getEfuseMac() >> 32)));
+  sprintf(_client_ID, "E32__-%lX%lX", (long unsigned int)(0xffff & ESP.getEfuseMac()), (long unsigned int)(0xffff & (ESP.getEfuseMac() >> 32)));
 }
 
 void Mein_MQTT::Beginn() {
   __MQTT_Adaptor.Beginn();
+  __MQTT_Adaptor.SetCallback(this);
 }
 
 void Mein_MQTT::Tick() {
@@ -109,6 +109,10 @@ bool Mein_MQTT::Registriere_Thema(int i, const char* t) {
   } else {
     D_PRINTF(" leer\n");
   }
+}
+
+void Mein_MQTT::Callback(const char*t, const char*n, int l) {
+  NeuerEintrag(t,n,l);
 }
 
 void Mein_MQTT::NeuerEintrag(const char*t, const char *n, int l) {

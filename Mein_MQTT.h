@@ -1,13 +1,15 @@
 #ifndef _INCLUDE_MQTT
 #define _INCLUDE_MQTT
 
+#include "MQTT_Adaptor.h"
+
 #define MAX_NACHRICHTEN	40
 #define MAX_NACHRICHT   40
 #define MAX_THEMA       40
 #define MAX_THEMEN      5
 
 
-class Mein_MQTT {
+class Mein_MQTT : public MQTT_Callback {
   public:
     Mein_MQTT();
 
@@ -31,6 +33,8 @@ class Mein_MQTT {
 
     bool Speichern();
     void Speichern(bool ja);
+
+    void Callback(const char*t, const char*n, int l);
 
   private:
     char _client_ID[20];
