@@ -9,6 +9,7 @@
 #include "WebS.h"
 #include "NTP.h"
 #include "Mein_MQTT.h"
+#include "Mein_TFT.h"
 
 #define DEBUG_SERIAL
 #ifdef DEBUG_SERIAL
@@ -27,6 +28,7 @@ WiFiClient __Wifi_Client;
 WebS __WebS;
 Mein_MQTT __MQTT;
 NTP_Helfer __NTP;
+Mein_TFT __Tft;
 
 /////////////////////////////////////////////////
 // Normaler WiFi Part
@@ -52,6 +54,7 @@ void setup_wifi() {
   D_PRINTLN(WiFi.localIP());
 
   MDNS.begin("MQTT_Monitor");
+
 }
 
 
@@ -73,6 +76,9 @@ void setup() {
 
   // MQTT initialisieren
   __MQTT.Beginn();
+
+  // TFT Anzeige initialisieren
+  __Tft.Beginn();
 }
 
 void loop() {

@@ -94,27 +94,41 @@ void handleSetzeTopic() {
   __MQTT.Speichern(false);
   __AutoUpdate = false;
   for (int i = 0; i < server.args(); i++) {
-    if (server.argName(i) == "thema0") {
-      String neues_thema = server.arg(i);
-      D_PRINTF("Neues Topic: %s\n", neues_thema.c_str());
-      __MQTT.Registriere_Thema(0, neues_thema.c_str());
-    } else if (server.argName(i) == "thema1") {
-      String neues_thema = server.arg(i);
-      D_PRINTF("Neues Topic: %s\n", neues_thema.c_str());
-      __MQTT.Registriere_Thema(1, neues_thema.c_str());
-    } else if (server.argName(i) == "thema2") {
-      String neues_thema = server.arg(i);
-      D_PRINTF("Neues Topic: %s\n", neues_thema.c_str());
-      __MQTT.Registriere_Thema(2, neues_thema.c_str());
-    } else if (server.argName(i) == "thema3") {
-      String neues_thema = server.arg(i);
-      D_PRINTF("Neues Topic: %s\n", neues_thema.c_str());
-      __MQTT.Registriere_Thema(3, neues_thema.c_str());
-    } else if (server.argName(i) == "thema4") {
-      String neues_thema = server.arg(i);
-      D_PRINTF("Neues Topic: %s\n", neues_thema.c_str());
-      __MQTT.Registriere_Thema(4, neues_thema.c_str());
-    } else if (server.argName(i) == "auto") {
+    for (int ii = 0; ii < MAX_THEMEN; ii++) {
+      char the[10];
+      sprintf(the, "thema%d", ii);
+      if (server.argName(i) == the) {
+        String neues_thema = server.arg(i);
+        D_PRINTF("Neues Topic: %s\n", neues_thema.c_str());
+        __MQTT.Registriere_Thema(ii, neues_thema.c_str());
+      }
+    }
+    //    if (server.argName(i) == "thema0") {
+    //      String neues_thema = server.arg(i);
+    //      D_PRINTF("Neues Topic: %s\n", neues_thema.c_str());
+    //      __MQTT.Registriere_Thema(0, neues_thema.c_str());
+    //    } else if (server.argName(i) == "thema1") {
+    //      String neues_thema = server.arg(i);
+    //      D_PRINTF("Neues Topic: %s\n", neues_thema.c_str());
+    //      __MQTT.Registriere_Thema(1, neues_thema.c_str());
+    //    } else if (server.argName(i) == "thema2") {
+    //      String neues_thema = server.arg(i);
+    //      D_PRINTF("Neues Topic: %s\n", neues_thema.c_str());
+    //      __MQTT.Registriere_Thema(2, neues_thema.c_str());
+    //    } else if (server.argName(i) == "thema3") {
+    //      String neues_thema = server.arg(i);
+    //      D_PRINTF("Neues Topic: %s\n", neues_thema.c_str());
+    //      __MQTT.Registriere_Thema(3, neues_thema.c_str());
+    //    } else if (server.argName(i) == "thema4") {
+    //      String neues_thema = server.arg(i);
+    //      D_PRINTF("Neues Topic: %s\n", neues_thema.c_str());
+    //      __MQTT.Registriere_Thema(4, neues_thema.c_str());
+    //    } else if (server.argName(i) == "thema5") {
+    //      String neues_thema = server.arg(i);
+    //      D_PRINTF("Neues Topic: %s\n", neues_thema.c_str());
+    //      __MQTT.Registriere_Thema(5, neues_thema.c_str());
+    //    } else
+    if (server.argName(i) == "auto") {
       __AutoUpdate = true;
       D_PRINTF("Auto-Update an\n");
     } else if (server.argName(i) == "speichern") {

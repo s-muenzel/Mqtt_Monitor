@@ -1,3 +1,4 @@
+#include <FS.h>
 #include <SPIFFS.h>
 #include <Regexp.h>
 
@@ -6,20 +7,59 @@
 
 MQTT_Adaptor __MQTT_Adaptor;
 
+// Verstehe es nicht, aber als Arg in lese_zeile spuckt der Compiler ???
+File __file;
+bool lese_zeile(char*buf, int size) {
+  int i = 0;
+  while (__file.available()) {
+    char c = __file.read();
+    if (c == '\r') {
+      continue;
+    } else if (c == '\n') {
+      return true;
+    } else {
+      buf[i] = c;
+      i++;
+      buf[i] = 0;
+      if (i == size)
+        return true;
+    }
+  }
+  return false;
+}
 
 Mein_MQTT::Mein_MQTT() {
   anzahl_nachrichten = 0;
   naechste_nachricht = 0;
-  for (int i = 0; i < MAX_THEMEN; i++) {
-    strcpy(thema[i], ""); // "" ist kein Thema
-    strcpy(thema_regexp[i], ""); // "" ist kein Thema
-  }
   _update_vorhanden = false;
-  _speichern = false;
   sprintf(_client_ID, "E32__-%lX%lX", (long unsigned int)(0xffff & ESP.getEfuseMac()), (long unsigned int)(0xffff & (ESP.getEfuseMac() >> 32)));
 }
 
 void Mein_MQTT::Beginn() {
+  D_PRINTLN("Mein_MQTT.Beginn");
+  if (SPIFFS.exists("/config.txt")) {
+    D_PRINTLN("/config.txt gefunden");
+    _speichern = true;
+    __file = SPIFFS.open("/config.txt", "r");
+    char buffer[MAX_THEMA];
+    for (int i = 0; i < MAX_THEMEN; i++) {
+      if (lese_zeile(buffer, MAX_THEMA)) {
+        D_PRINTF("Thema[%d]=%s\n",i,buffer);
+        Registriere_Thema(i, buffer);
+      } else {
+        D_PRINTF("Thema[%d] ist leer(%s)\n",i,buffer);
+        strcpy(thema[i], ""); // "" ist kein Thema
+        strcpy(thema_regexp[i], ""); // "" ist kein Thema
+      }
+    }
+    __file.close();
+  } else {
+    _speichern = false;
+    for (int i = 0; i < MAX_THEMEN; i++) {
+      strcpy(thema[i], ""); // "" ist kein Thema
+      strcpy(thema_regexp[i], ""); // "" ist kein Thema
+    }
+  }
   __MQTT_Adaptor.Beginn();
   __MQTT_Adaptor.SetCallback(this);
 }
@@ -46,7 +86,9 @@ const char* Mein_MQTT::Zeitstempel(int i) {
   int ii = constrain(i, 0, anzahl_nachrichten);
   ii += naechste_nachricht;
   ii %= anzahl_nachrichten;
-  sprintf(z_puffer, "%2d:%02d:%02d", hour(nachricht_zeit[ii]), minute(nachricht_zeit[ii]), second(nachricht_zeit[ii]));
+  sprintf(z_puffer, "%02d.%d.%4d %02d:%02d:%02d",
+          day(nachricht_zeit[ii]), month(nachricht_zeit[ii]), year(nachricht_zeit[ii]),
+          hour(nachricht_zeit[ii]), minute(nachricht_zeit[ii]), second(nachricht_zeit[ii]));
   return z_puffer;
 }
 
@@ -96,7 +138,7 @@ bool Mein_MQTT::Registriere_Thema(int i, const char* t) {
   strncpy(thema[i], t, MAX_THEMA);
   strncpy(thema_regexp[i], t, MAX_THEMA);
   MatchState ms (thema_regexp[i]  );
-  ms.GlobalReplace("\+", "[^/]*");
+  ms.GlobalReplace("+", "[^/]*");
   ms.GlobalReplace("#.*", ".*");
   D_PRINTF(" Regexp:<%s>", thema_regexp[i]);
 
@@ -112,7 +154,7 @@ bool Mein_MQTT::Registriere_Thema(int i, const char* t) {
 }
 
 void Mein_MQTT::Callback(const char*t, const char*n, int l) {
-  NeuerEintrag(t,n,l);
+  NeuerEintrag(t, n, l);
 }
 
 void Mein_MQTT::NeuerEintrag(const char*t, const char *n, int l) {
@@ -133,6 +175,11 @@ void Mein_MQTT::NeuerEintrag(const char*t, const char *n, int l) {
   }
   strncpy(nachricht_topic[naechste_nachricht], t, MAX_THEMA);
   strncpy(nachricht_inhalt[naechste_nachricht], n, l);
+  char tft_text[100];
+  snprintf(tft_text, 100, "%s: %s                   ", nachricht_topic[naechste_nachricht],nachricht_inhalt[naechste_nachricht]);
+  MatchState ms2(tft_text);
+  ms2.GlobalReplace(".*/","");
+  __Tft.Zeige(nachricht_filter_no[naechste_nachricht],nachricht_filter_no[naechste_nachricht],tft_text);
   for (int i = l; i < MAX_NACHRICHT; i++)
     nachricht_inhalt[naechste_nachricht][i] = '\0';
   naechste_nachricht++;
@@ -184,6 +231,15 @@ bool Mein_MQTT::Speichern() {
 }
 
 void Mein_MQTT::Speichern(bool ja) {
+  if (ja) {
+    File file = SPIFFS.open("/config.txt", "w");
+    for (int i = 0; i < MAX_THEMEN; i++) {
+      file.println(Aktuelles_Thema(i));
+    }
+    file.close();
+  } else {
+    SPIFFS.remove("/config.txt");
+  }
   _speichern = ja;
 }
 

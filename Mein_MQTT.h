@@ -6,7 +6,7 @@
 #define MAX_NACHRICHTEN	40
 #define MAX_NACHRICHT   40
 #define MAX_THEMA       40
-#define MAX_THEMEN      5
+#define MAX_THEMEN      6
 
 
 class Mein_MQTT : public MQTT_Callback {
