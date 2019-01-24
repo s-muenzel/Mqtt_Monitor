@@ -44,13 +44,16 @@ void Mein_MQTT::Beginn() {
     char buffer[MAX_THEMA];
     for (int i = 0; i < MAX_THEMEN; i++) {
       if (lese_zeile(buffer, MAX_THEMA)) {
-        D_PRINTF("Thema[%d]=%s\n",i,buffer);
+        D_PRINTF("Thema[%d]=%s\n", i, buffer);
         Registriere_Thema(i, buffer);
       } else {
-        D_PRINTF("Thema[%d] ist leer(%s)\n",i,buffer);
+        D_PRINTF("Thema[%d] ist leer(%s)\n", i, buffer);
         strcpy(thema[i], ""); // "" ist kein Thema
         strcpy(thema_regexp[i], ""); // "" ist kein Thema
       }
+    }
+    if (lese_zeile(buffer, MAX_THEMA)) {
+      _fehler_speichern = (strcmp(buffer, "Fehler:ja") == 0);
     }
     __file.close();
   } else {
@@ -66,11 +69,13 @@ void Mein_MQTT::Beginn() {
 
 void Mein_MQTT::Tick() {
   if (!__MQTT_Adaptor.Verbunden()) {
-    char tt[MAX_THEMA];
-    char nn[MAX_NACHRICHT];
-    strcpy(tt, "MQTT FEHLER");
-    sprintf(nn, "Fehlerstatus: %d", __MQTT_Adaptor.Status());
-    NeuerEintrag(tt, nn, strlen(nn));
+    if (_fehler_speichern) {
+      char tt[MAX_THEMA];
+      char nn[MAX_NACHRICHT];
+      strcpy(tt, "MQTT FEHLER");
+      sprintf(nn, "Fehlerstatus: %d", __MQTT_Adaptor.Status());
+      NeuerEintrag(tt, nn, strlen(nn));
+    }
     reconnect();
   }
   __MQTT_Adaptor.Tick();
@@ -174,12 +179,25 @@ void Mein_MQTT::NeuerEintrag(const char*t, const char *n, int l) {
     }
   }
   strncpy(nachricht_topic[naechste_nachricht], t, MAX_THEMA);
-  strncpy(nachricht_inhalt[naechste_nachricht], n, l);
-  char tft_text[100];
-  snprintf(tft_text, 100, "%s: %s                   ", nachricht_topic[naechste_nachricht],nachricht_inhalt[naechste_nachricht]);
-  MatchState ms2(tft_text);
-  ms2.GlobalReplace(".*/","");
-  __Tft.Zeige(nachricht_filter_no[naechste_nachricht],nachricht_filter_no[naechste_nachricht],tft_text);
+  nachricht_topic[naechste_nachricht][MAX_THEMA - 1] = '\0';
+  strncpy(nachricht_inhalt[naechste_nachricht], n, MAX_NACHRICHT);
+  nachricht_inhalt[naechste_nachricht][l + 1] = '\0';
+  char tft_text[128];
+  int offset = strlen(nachricht_topic[naechste_nachricht]) - 1;
+  if (offset > 0) {
+    if (nachricht_topic[naechste_nachricht][offset] == '/') {
+      strncpy(tft_text, nachricht_inhalt[naechste_nachricht], 128);
+    } else {
+      tft_text[0] = nachricht_topic[naechste_nachricht][offset];
+      tft_text[1] = ':';
+      strncpy(tft_text + 2, nachricht_inhalt[naechste_nachricht], 126);
+    }
+    tft_text[127] = '\0';
+  } else {
+    strncpy(tft_text, nachricht_inhalt[naechste_nachricht], 128);
+    tft_text[127] = '\0';
+  }
+  __Tft.Zeige(nachricht_filter_no[naechste_nachricht], nachricht_filter_no[naechste_nachricht], tft_text);
   for (int i = l; i < MAX_NACHRICHT; i++)
     nachricht_inhalt[naechste_nachricht][i] = '\0';
   naechste_nachricht++;
@@ -226,6 +244,14 @@ bool Mein_MQTT::Update_Vorhanden() {
     return false;
 }
 
+bool Mein_MQTT::Fehler_Speichern() {
+  return _fehler_speichern;
+}
+
+void Mein_MQTT::Fehler_Speichern(bool ja) {
+  _fehler_speichern = ja;
+}
+
 bool Mein_MQTT::Speichern() {
   return _speichern;
 }
@@ -235,6 +261,11 @@ void Mein_MQTT::Speichern(bool ja) {
     File file = SPIFFS.open("/config.txt", "w");
     for (int i = 0; i < MAX_THEMEN; i++) {
       file.println(Aktuelles_Thema(i));
+    }
+    if (_fehler_speichern) {
+      file.println("Fehler:ja");
+    } else {
+      file.println("Fehler:nein");
     }
     file.close();
   } else {

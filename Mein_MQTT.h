@@ -31,6 +31,9 @@ class Mein_MQTT : public MQTT_Callback {
 
     bool Update_Vorhanden();
 
+    bool Fehler_Speichern();
+    void Fehler_Speichern(bool ja);
+
     bool Speichern();
     void Speichern(bool ja);
 
@@ -53,6 +56,7 @@ class Mein_MQTT : public MQTT_Callback {
     void Sichern();
     void reconnect();
     bool _update_vorhanden;
+    bool _fehler_speichern;
     bool _speichern;
     int _speicher_count;
 };

@@ -30,7 +30,6 @@ void Nachricht_Erhalten(char* topic, byte* payload, unsigned int length) {
     __MeinCallbackObjekt->Callback(topic, payload, length);
 
   }
-  //  __MQTT.NeuerEintrag((const char*)topic, (const char*)payload, length);
 }
 #endif // USE_PUBSUBBLIENT
 #ifdef USE_ARDUINO_MQTT
@@ -40,7 +39,6 @@ void Nachricht_Erhalten(String &topic, String &payload) {
     D_PRINTF("Rufe Callback auf\n");
     __MeinCallbackObjekt->Callback(topic.c_str(), payload.c_str(), payload.length());
   }
-  //  __MQTT.NeuerEintrag(topic.c_str(), payload.c_str(), payload.length());
 }
 #endif // USE_ARDUINO_MQTT
 
@@ -56,7 +54,6 @@ void MQTT_Adaptor::Beginn() {
 #ifdef USE_ARDUINO_MQTT
   client.begin(mqtt_server, 1883, __Wifi_Client);
   client.onMessage(Nachricht_Erhalten);
-  //  client.onMessageAdvanced(Nachricht_Erhalten);
 #endif // USE_ARDUINO_MQTT
 }
 
