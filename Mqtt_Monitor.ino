@@ -1,4 +1,9 @@
-/* */
+/*
+
+  using Lolin D32
+  Partition Scheme Minimal (2MB Flash)
+
+*/
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -10,6 +15,7 @@
 #include "NTP.h"
 #include "Mein_MQTT.h"
 #include "Mein_TFT.h"
+#include "OTA.h"
 
 #define DEBUG_SERIAL
 #ifdef DEBUG_SERIAL
@@ -24,11 +30,21 @@
 #define D_PRINTF(...)
 #endif
 
+//#define LED_INVERTED // z.B. Lolin D32
+#ifdef LED_INVERTED
+#define LED_AN  LOW
+#define LED_AUS HIGH
+#else // LED_INVERTED
+#define LED_AN  HIGH
+#define LED_AUS LOW
+#endif // LED_INVERTED
+
 WiFiClient __Wifi_Client;
 WebS __WebS;
 Mein_MQTT __MQTT;
 NTP_Helfer __NTP;
 Mein_TFT __Tft;
+OTA __OTA;
 
 /////////////////////////////////////////////////
 // Normaler WiFi Part
@@ -79,6 +95,10 @@ void setup() {
 
   // TFT Anzeige initialisieren
   __Tft.Beginn();
+
+  __OTA.Beginn();
+// soll erst im WebS Seite OTA eingeschaltet werden
+//__OTA.Bereit();
 }
 
 void loop() {
@@ -86,6 +106,8 @@ void loop() {
   __MQTT.Tick();
   yield();
   __WebS.Tick();
+  yield();
+  __OTA.Tick();
   delay(50);
 }
 

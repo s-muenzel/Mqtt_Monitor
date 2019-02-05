@@ -163,7 +163,7 @@ void Mein_MQTT::Callback(const char*t, const char*n, int l) {
 }
 
 void Mein_MQTT::NeuerEintrag(const char*t, const char *n, int l) {
-  digitalWrite(LED_BUILTIN, LOW);   // Turn the LED on (Note that LOW is the voltage level
+  digitalWrite(LED_BUILTIN, LED_AN);   // Turn the LED on (Note that LOW is the voltage level
   D_PRINTF("Neue Nachricht [%s] [%s]\n", t, n);
   _update_vorhanden = true;
   nachricht_zeit[naechste_nachricht] = now();
@@ -211,7 +211,7 @@ void Mein_MQTT::NeuerEintrag(const char*t, const char *n, int l) {
   if (_speichern && (_speicher_count == MAX_NACHRICHTEN)) {
     Sichern();
   }
-  digitalWrite(LED_BUILTIN, HIGH);  // Turn the LED off by making the voltage HIGH
+  digitalWrite(LED_BUILTIN, LED_AUS);  // Turn the LED off by making the voltage HIGH
 }
 
 void Mein_MQTT::reconnect() {

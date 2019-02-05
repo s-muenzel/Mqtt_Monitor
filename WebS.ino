@@ -141,6 +141,15 @@ void handleStatus() {
   server.send(200, "application/json", temp);
 }
 
+void handleOTA() {
+  if (!server.authenticate(admin_user, admin_pw)) {
+    server.requestAuthentication(DIGEST_AUTH, "Admin-Mode", "Admin Mode failed");
+  } else {
+    __OTA.Bereit();
+    server.send(200, "text/plain", "OTA eingeschaltet");
+  }
+}
+
 void handleFavIcon() {
   D_PRINTLN("handleFavIcon");
   if (SPIFFS.exists("/favicon.ico")) {
@@ -266,7 +275,7 @@ WebS::WebS() {
 }
 
 void WebS::Beginn() {
-  if (!SPIFFS.begin()) {
+  if (!SPIFFS.begin(true)) {
     D_PRINTLN("Failed to mount file system");
   }
 
@@ -275,6 +284,7 @@ void WebS::Beginn() {
   server.on("/Monitor",       handleMonitor);
   server.on("/Nachrichten",   handleNachrichten);
   server.on("/Setze_Topic",   handleSetzeTopic);
+  server.on("/OTA",           handleOTA);           // Anschalten von OTA
   server.on("/Dateien",       handleDateien);       // Datei-Operationen (upload, delete)
   server.on("/Loeschen",      handleLoeschen);      // Delete (spezifische Datei)
   server.on("/Laden",         handleLaden);         // Herunterladen (spezifische Datei)
