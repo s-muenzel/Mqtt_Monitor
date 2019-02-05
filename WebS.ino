@@ -82,10 +82,10 @@ void handleMonitor() {
   for (int i = 0; i < MAX_THEMEN; i++) {
     temp += "<span class='filter" + String(i, HEX);
     temp += "'><span>Topic" + String(i, HEX);
-    temp += "</span><span class='Rechts'><input type='text' name='thema" + String(i, HEX) ; //
+    temp += "</span><span class='Rechts'><input type='text' name='thema" + String(i, HEX);
     temp += "' value='";
     temp += __MQTT.Aktuelles_Thema(i);
-    temp += "'></span></span>";
+    temp += "'></span><input type='checkbox' name='speichern' checked></span>";
   }
   temp += "<input type='submit' name='ok' value='ok'></div></form>";
   temp += "</body></html>";
@@ -266,7 +266,7 @@ WebS::WebS() {
 }
 
 void WebS::Beginn() {
-  if (!SPIFFS.begin()) {
+  if (!SPIFFS.begin(true)) {
     D_PRINTLN("Failed to mount file system");
   }
 

@@ -1,5 +1,5 @@
 #define USE_ARDUINO_MQTT
-//#define USE_PUBSUBBLIENT
+//#define USE_PUBSUBCLIENT
 
 #include "MQTT_Adaptor.h"
 
@@ -22,16 +22,16 @@ MQTTClient client;
 //}
 MQTT_Callback *__MeinCallbackObjekt = NULL;
 
-#ifdef USE_PUBSUBBLIENT
+#ifdef USE_PUBSUBCLIENT
 void Nachricht_Erhalten(char* topic, byte* payload, unsigned int length) {
   D_PRINTF("Nachricht: <%s><%s><%d>\n", topic, payload, length);
   if (__MeinCallbackObjekt != NULL) {
     D_PRINTF("Rufe Callback auf\n");
-    __MeinCallbackObjekt->Callback(topic, payload, length);
+    __MeinCallbackObjekt->Callback(topic, (const char*)payload, length);
 
   }
 }
-#endif // USE_PUBSUBBLIENT
+#endif // USE_PUBSUBCLIENT
 #ifdef USE_ARDUINO_MQTT
 void Nachricht_Erhalten(String &topic, String &payload) {
   D_PRINTF("Nachricht: <%s><%s><%d>\n", topic.c_str(), payload.c_str(), payload.length());
@@ -47,10 +47,10 @@ MQTT_Adaptor::MQTT_Adaptor() {
 }
 
 void MQTT_Adaptor::Beginn() {
-#ifdef USE_PUBSUBBLIENT
+#ifdef USE_PUBSUBCLIENT
   client.setServer(mqtt_server, 1883);
   client.setCallback(Nachricht_Erhalten);
-#endif // USE_PUBSUBBLIENT
+#endif // USE_PUBSUBCLIENT
 #ifdef USE_ARDUINO_MQTT
   client.begin(mqtt_server, 1883, __Wifi_Client);
   client.onMessage(Nachricht_Erhalten);
@@ -71,9 +71,9 @@ bool MQTT_Adaptor::Verbinde(const char*ClientID, const char* User, const char* P
 }
 
 bool MQTT_Adaptor::Verbinde(const char*ClientID, const char* User, const char* PW, const char* WillTopic, int WillQoS, int WillRetain, const char*WillMessage) {
-#ifdef USE_PUBSUBBLIENT
+#ifdef USE_PUBSUBCLIENT
   client.connect (ClientID, User, PW, WillTopic, WillQoS, WillRetain, WillMessage);
-#endif // USE_PUBSUBBLIENT
+#endif // USE_PUBSUBCLIENT
 #ifdef USE_ARDUINO_MQTT
   client.connect (ClientID, User, PW);
   client.setWill(WillTopic, WillMessage, WillRetain, WillQoS);
@@ -87,7 +87,7 @@ void MQTT_Adaptor::Tick() {
 }
 
 bool MQTT_Adaptor::Publish(const char *Thema, const char *Nachricht, bool retained, int qos) {
-#ifdef USE_PUBSUBBLIENT
+#ifdef USE_PUBSUBCLIENT
   yield();
   if (client.publish(Thema, Nachricht, retained)) {
     delay(10);
@@ -95,7 +95,7 @@ bool MQTT_Adaptor::Publish(const char *Thema, const char *Nachricht, bool retain
     return true;
   } else
     return false;
-#endif // USE_PUBSUBBLIENT
+#endif // USE_PUBSUBCLIENT
 #ifdef USE_ARDUINO_MQTT
   yield();
   if (client.publish(Thema, Nachricht, retained, qos)) {
@@ -109,9 +109,9 @@ bool MQTT_Adaptor::Publish(const char *Thema, const char *Nachricht, bool retain
 
 bool MQTT_Adaptor::Subscribe(const char *Thema) {
   if (client.connected()) {
-#ifdef USE_PUBSUBBLIENT
+#ifdef USE_PUBSUBCLIENT
     bool ergebnis = client.subscribe(Thema, 1);
-#endif // USE_PUBSUBBLIENT
+#endif // USE_PUBSUBCLIENT
 #ifdef USE_ARDUINO_MQTT
     bool ergebnis = client.subscribe(Thema, 1);
 #endif // USE_ARDUINO_MQTT
@@ -137,9 +137,9 @@ bool MQTT_Adaptor::Unsubscribe(const char *Thema) {
 }
 
 int MQTT_Adaptor::Status() {
-#ifdef USE_PUBSUBBLIENT
+#ifdef USE_PUBSUBCLIENT
   return client.state();
-#endif // USE_PUBSUBBLIENT
+#endif // USE_PUBSUBCLIENT
 #ifdef USE_ARDUINO_MQTT
   return client.lastError();
 #endif // USE_ARDUINO_MQTT

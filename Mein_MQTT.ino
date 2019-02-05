@@ -1,32 +1,19 @@
+// Used for persisting Messages
+// and configuration (in JSON format)
+
 #include <FS.h>
 #include <SPIFFS.h>
+
+#include "Config.h"
+
 #include <Regexp.h>
 
 #include "Zugangsinfo.h"
 #include "Mein_MQTT.h"
 
+
 MQTT_Adaptor __MQTT_Adaptor;
 
-// Verstehe es nicht, aber als Arg in lese_zeile spuckt der Compiler ???
-File __file;
-bool lese_zeile(char*buf, int size) {
-  int i = 0;
-  while (__file.available()) {
-    char c = __file.read();
-    if (c == '\r') {
-      continue;
-    } else if (c == '\n') {
-      return true;
-    } else {
-      buf[i] = c;
-      i++;
-      buf[i] = 0;
-      if (i == size)
-        return true;
-    }
-  }
-  return false;
-}
 
 Mein_MQTT::Mein_MQTT() {
   anzahl_nachrichten = 0;
@@ -37,26 +24,10 @@ Mein_MQTT::Mein_MQTT() {
 
 void Mein_MQTT::Beginn() {
   D_PRINTLN("Mein_MQTT.Beginn");
-  if (SPIFFS.exists("/config.txt")) {
-    D_PRINTLN("/config.txt gefunden");
-    _speichern = true;
-    __file = SPIFFS.open("/config.txt", "r");
-    char buffer[MAX_THEMA];
-    for (int i = 0; i < MAX_THEMEN; i++) {
-      if (lese_zeile(buffer, MAX_THEMA)) {
-        D_PRINTF("Thema[%d]=%s\n", i, buffer);
-        Registriere_Thema(i, buffer);
-      } else {
-        D_PRINTF("Thema[%d] ist leer(%s)\n", i, buffer);
-        strcpy(thema[i], ""); // "" ist kein Thema
-        strcpy(thema_regexp[i], ""); // "" ist kein Thema
-      }
-    }
-    if (lese_zeile(buffer, MAX_THEMA)) {
-      _fehler_speichern = (strcmp(buffer, "Fehler:ja") == 0);
-    }
-    __file.close();
-  } else {
+  if (!SPIFFS.begin(true)) {
+    D_PRINTLN("Failed to mount file system");
+  }
+  if (!Lese_Config()) {
     _speichern = false;
     for (int i = 0; i < MAX_THEMEN; i++) {
       strcpy(thema[i], ""); // "" ist kein Thema
@@ -258,18 +229,9 @@ bool Mein_MQTT::Speichern() {
 
 void Mein_MQTT::Speichern(bool ja) {
   if (ja) {
-    File file = SPIFFS.open("/config.txt", "w");
-    for (int i = 0; i < MAX_THEMEN; i++) {
-      file.println(Aktuelles_Thema(i));
-    }
-    if (_fehler_speichern) {
-      file.println("Fehler:ja");
-    } else {
-      file.println("Fehler:nein");
-    }
-    file.close();
+    Schreibe_Config();
   } else {
-    SPIFFS.remove("/config.txt");
+    Loesche_Config();
   }
   _speichern = ja;
 }
@@ -288,5 +250,78 @@ void Mein_MQTT::Sichern() {
   }
   logfile.close();
   _speicher_count = 0;
+}
+
+
+// Verstehe es nicht, aber als Arg in lese_zeile spuckt der Compiler ???
+bool lese_zeile(File f, char*buf, int size) {
+File __file;
+  int i = 0;
+  while (__file.available()) {
+    char c = __file.read();
+    if (c == '\r') {
+      continue;
+    } else if (c == '\n') {
+      return true;
+    } else {
+      if (i >= size - 1)
+        return true;
+      buf[i] = c;
+      i++;
+      buf[i] = 0;
+    }
+  }
+  return false;
+}
+
+
+bool Mein_MQTT::Lese_Config() {
+  // Initialisieren der Werte
+  File file;
+  if (SPIFFS.exists("/config.txt")) {
+    _speichern = true;
+    file = SPIFFS.open("/config.txt", "r");
+    D_PRINTLN("/config.txt gefunden");
+
+
+    char buffer[MAX_THEMA];
+    for (int i = 0; i < MAX_THEMEN; i++) {
+      if (lese_zeile(buffer, MAX_THEMA)) {
+        D_PRINTF("Thema[%d]=%s\n", i, buffer);
+        Registriere_Thema(i, buffer);
+      } else {
+        D_PRINTF("Thema[%d] ist leer(%s)\n", i, buffer);
+        strcpy(thema[i], ""); // "" ist kein Thema
+        strcpy(thema_regexp[i], ""); // "" ist kein Thema
+      }
+    }
+    if (lese_zeile(file, buffer, MAX_THEMA)) {
+      _fehler_speichern = (strcmp(buffer, "Fehler:ja") == 0);
+    }
+    file.close();
+    return true;
+  } else {
+    return false;
+  }
+}
+
+void Mein_MQTT::Schreibe_Config() {
+  File file = SPIFFS.open("/config.txt", "w");
+  for (int i = 0; i < MAX_THEMEN; i++) {
+    file.println(Aktuelles_Thema(i));
+  }
+  if (_fehler_speichern) {
+    file.println("Fehler:ja");
+  } else {
+    file.println("Fehler:nein");
+  }
+  file.close();
+
+}
+
+void Mein_MQTT::Loesche_Config() {
+  if (SPIFFS.exists("/config.txt")) {
+    SPIFFS.remove("/config.txt");
+  }
 }
 

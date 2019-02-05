@@ -59,6 +59,11 @@ class Mein_MQTT : public MQTT_Callback {
     bool _fehler_speichern;
     bool _speichern;
     int _speicher_count;
+
+
+    bool Lese_Config();
+    void Schreibe_Config();
+    void Loesche_Config();
 };
 
 #endif // _INCLUDE_MQTT

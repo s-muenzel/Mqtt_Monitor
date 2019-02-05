@@ -1,4 +1,19 @@
-/* */
+/*
+Used Libraries:
+
+tft_eSPI      (TFT with SPI interface)
+MQTT          (By Joel Gaehwiler -  One possible MQTT Implementation)
+PubSubClient  (One possible MQTT implementation)
+RegExp        (Regular Expressions)
+Time          (for NTP)
+WifiUPD       (ESP UDP - - build in with ESP)
+ESPmDNS       (Micro DNS - announce, who we are - build in with ESP)
+WiFi          (ESP Wifi Lib - build in with ESP)
+WebServer     (ESP WebServer - - build in with ESP)
+FS            (FS - ESP - build in)
+SPIFS         (SPIFS - ESP - build in)
+SPI           (SPI - build in)
+*/
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
