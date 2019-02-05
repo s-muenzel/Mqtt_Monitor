@@ -1,9 +1,6 @@
 // Used for persisting Messages
 // and configuration (in JSON format)
 
-#include <FS.h>
-#include <SPIFFS.h>
-
 #include "Config.h"
 
 #include <Regexp.h>
@@ -254,8 +251,8 @@ void Mein_MQTT::Sichern() {
 
 
 // Verstehe es nicht, aber als Arg in lese_zeile spuckt der Compiler ???
-bool lese_zeile(File f, char*buf, int size) {
-File __file;
+bool Mein_MQTT::lese_zeile(File &__file, char*buf, int size) {
+//File __file = f;
   int i = 0;
   while (__file.available()) {
     char c = __file.read();
@@ -286,7 +283,7 @@ bool Mein_MQTT::Lese_Config() {
 
     char buffer[MAX_THEMA];
     for (int i = 0; i < MAX_THEMEN; i++) {
-      if (lese_zeile(buffer, MAX_THEMA)) {
+      if (lese_zeile(file,buffer, MAX_THEMA)) {
         D_PRINTF("Thema[%d]=%s\n", i, buffer);
         Registriere_Thema(i, buffer);
       } else {

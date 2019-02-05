@@ -1,6 +1,9 @@
 #ifndef _INCLUDE_MQTT
 #define _INCLUDE_MQTT
 
+#include <FS.h>
+#include <SPIFFS.h>
+
 #include "MQTT_Adaptor.h"
 
 #define MAX_NACHRICHTEN	40
@@ -64,6 +67,7 @@ class Mein_MQTT : public MQTT_Callback {
     bool Lese_Config();
     void Schreibe_Config();
     void Loesche_Config();
+    bool lese_zeile(File &__file, char*buf, int size);
 };
 
 #endif // _INCLUDE_MQTT
