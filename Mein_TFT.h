@@ -5,7 +5,7 @@ class Mein_TFT {
   public:
     Mein_TFT();
     void Beginn();
-    void Zeige(uint8_t Zeile, uint8_t Kanal, const char*Text);
+    void Zeige(uint8_t Zeile, uint8_t Farbe, const char*Text);
   private:
 };
 
